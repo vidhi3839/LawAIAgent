@@ -1,0 +1,313 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+:root {
+  --bg: #F3F4F7;
+  --surface: #FFFFFF;
+  --border: #E3E5EA;
+  --text: #16181D;
+  --text-muted: #6B7280;
+  --accent: #33459E;
+  --accent-hover: #29357D;
+  --success: #157F3D;
+  --success-bg: #EAF7EF;
+  --warning: #B45309;
+  --warning-bg: #FDF3E7;
+  --danger: #B91C1C;
+  --danger-bg: #FCEAEA;
+  --radius: 8px;
+  --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html, body, #root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+}
+
+.app {
+  display: flex;
+  height: 100vh;
+}
+
+/* ── Sidebar ─────────────────────────────────────────────────────────── */
+.sidebar {
+  width: 280px;
+  flex-shrink: 0;
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  padding: 20px;
+  overflow-y: auto;
+}
+
+.sidebar h2 {
+  font-size: 18px;
+  margin: 0 0 4px;
+}
+
+.sidebar h3 {
+  font-size: 12.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  margin: 0 0 8px;
+  font-weight: 600;
+}
+
+.thread-id {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--text-muted);
+  margin: 0 0 12px;
+}
+
+.sidebar hr {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 16px 0;
+}
+
+.hint {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin: 4px 0;
+  line-height: 1.5;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  margin-bottom: 4px;
+}
+
+.field input {
+  font-family: var(--mono);
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 14px;
+  background: var(--surface);
+  color: var(--text);
+}
+
+.btn-primary {
+  width: 100%;
+  padding: 10px;
+  background: var(--accent);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+.btn-primary:hover { background: var(--accent-hover); }
+.btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.thread-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.thread-btn {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  border-radius: 6px;
+  padding: 8px;
+  font-size: 12px;
+  color: var(--text);
+  cursor: pointer;
+}
+.thread-btn:hover { background: var(--bg); }
+.thread-btn.active { background: var(--accent); color: white; }
+.thread-date { color: var(--text-muted); font-size: 11px; }
+.thread-btn.active .thread-date { color: rgba(255, 255, 255, 0.75); }
+
+/* ── Main area ───────────────────────────────────────────────────────── */
+.main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 24px 32px;
+  min-width: 0;
+}
+
+.main h1 {
+  font-size: 26px;
+  margin: 0 0 16px;
+}
+
+.chat-window {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding-bottom: 16px;
+}
+
+.message {
+  max-width: 80%;
+  padding: 12px 16px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+}
+
+.message.user {
+  align-self: flex-end;
+  background: var(--accent);
+  color: white;
+  border: none;
+}
+.message.user .message-role { color: rgba(255, 255, 255, 0.8); }
+
+.message.assistant {
+  align-self: flex-start;
+  background: var(--surface);
+}
+
+.message-role {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+
+.message-content {
+  font-size: 14.5px;
+  line-height: 1.6;
+}
+.message-content p { margin: 0 0 8px; }
+.message-content p:last-child { margin-bottom: 0; }
+
+.chat-input-row {
+  display: flex;
+  gap: 10px;
+  margin-top: 8px;
+}
+.chat-input-row input {
+  flex: 1;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: inherit;
+}
+.chat-input-row button {
+  padding: 0 20px;
+  background: var(--accent);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.chat-input-row button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* ── Confidence card ─────────────────────────────────────────────────── */
+.conf-card {
+  margin-top: 10px;
+  padding: 10px 14px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 12.5px;
+}
+.conf-title { font-weight: 600; margin-bottom: 4px; }
+.conf-line, .conf-meta, .conf-breakdown {
+  color: var(--text-muted);
+  font-size: 12px;
+  margin-top: 4px;
+}
+.conf-breakdown {
+  border-top: 1px solid var(--border);
+  padding-top: 6px;
+  margin-top: 6px;
+}
+
+.badge {
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+.badge.pass { color: var(--success); background: var(--success-bg); }
+.badge.warn { color: var(--warning); background: var(--warning-bg); }
+.badge.fail { color: var(--danger); background: var(--danger-bg); }
+
+/* ── Upload panel ────────────────────────────────────────────────────── */
+.upload-panel {
+  margin-top: 16px;
+  border-top: 1px solid var(--border);
+  padding-top: 16px;
+}
+.upload-toggle {
+  background: none;
+  border: none;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  color: var(--text);
+  padding: 0;
+}
+.upload-body {
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.upload-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+.upload-row select, .upload-question {
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 13px;
+  font-family: inherit;
+  background: var(--surface);
+  color: var(--text);
+}
+.upload-row select { flex-shrink: 0; }
+.upload-question { flex: 1; }
+
+.status {
+  font-size: 13px;
+  padding: 8px 12px;
+  border-radius: 6px;
+}
+.status.info { background: var(--warning-bg); color: var(--warning); }
+.status.success { background: var(--success-bg); color: var(--success); }
+.status.error { background: var(--danger-bg); color: var(--danger); }
+
+.fatal-error {
+  padding: 40px;
+  color: var(--danger);
+  font-size: 16px;
+  line-height: 1.6;
+}
+.fatal-error code {
+  font-family: var(--mono);
+  background: var(--danger-bg);
+  padding: 2px 6px;
+  border-radius: 4px;
+}

@@ -1,0 +1,69 @@
+# =========================
+# Environment / Secrets
+# =========================
+.env
+.env.*
+!.env.example
+
+# =========================
+# Python
+# =========================
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyo
+.venv/
+venv/
+env/
+ENV/
+
+# =========================
+# Testing / Coverage
+# =========================
+.pytest_cache/
+.coverage
+htmlcov/
+*.cover
+*.log
+
+# =========================
+# Local application data
+# =========================
+data/uploads/
+data/case_pdfs/
+data/case_pdfs_uploaded/
+data/chroma_db/
+data/chroma_storage/
+*.db
+*.sqlite
+*.sqlite3
+
+# =========================
+# ChromaDB / vector stores
+# =========================
+tasks/chroma_db/
+tasks/chroma_storage/
+
+# =========================
+# Generated evaluation output
+# =========================
+tests/eval_output/
+
+# =========================
+# Frontend
+# =========================
+node_modules/
+dist/
+build/
+
+# =========================
+# OS / Editor
+# =========================
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+
+# Claude Code local settings
+.claude/settings.local.json

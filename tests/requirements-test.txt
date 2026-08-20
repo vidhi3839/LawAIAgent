@@ -1,0 +1,8 @@
+pytest>=7.4
+pytest-mock>=3.12
+numpy>=1.26
+# The app's own dependencies (langchain-groq, chromadb, sentence-transformers,
+# langgraph, psycopg-pool, fastapi, requests, beautifulsoup4, pypdf) must
+# already be installed in this environment since main.py imports them at
+# module load time — these tests don't add new runtime deps for the app
+# itself, only pytest and numpy (used in one semantic-grounding test).

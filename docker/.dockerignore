@@ -1,0 +1,33 @@
+# Environment / secrets
+.env
+.env.*
+!.env.example
+
+# Git
+.git
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+
+# Local application data
+data/uploads/
+data/case_pdfs/
+data/case_pdfs_uploaded/
+data/chroma_db/
+data/legal_memory.db
+
+# Local Chroma stores
+tasks/chroma_db/
+tasks/chroma_storage/
+
+# Frontend dependencies/build output
+lawaiagent-frontend/node_modules/
+lawaiagent-frontend/dist/
+
+# Test/cache output
+.pytest_cache/
+tests/eval_output/

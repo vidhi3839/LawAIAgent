@@ -1,0 +1,53 @@
+services:
+  backend:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.backend
+    ports:
+      - "8000:8000"
+    env_file:
+      - ../.env
+    volumes:
+      # Uploaded PDFs and the ChromaDB store persist across container
+      # restarts/rebuilds — without this, `docker compose down` wipes
+      # every past-case document you've ingested.
+      #
+      # chroma_data mounts at /app/data/chroma_db, matching
+      # tasks/past_cases.py's actual CHROMA_PATH (confirmed against the
+      # real code, not guessed).
+      - uploads_data:/app/data/uploads
+      - chroma_data:/app/data/chroma_db
+      # NEW: lawyer-uploaded case PDFs (via the new /past-cases/upload
+      # endpoint) are saved here. The actual searchable content lives in
+      # chroma_data already, but keeping the source PDFs around too is
+      # worth it for auditability -- a lawyer being able to go back and
+      # re-check exactly what was uploaded.
+      - case_uploads_data:/app/data/case_pdfs_uploaded
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 90s
+
+  frontend:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.frontend
+    ports:
+      # Host port 5173 -> nginx's port 80 inside the container. Chosen
+      # to match Vite's default dev-server port EXACTLY, so the
+      # browser-facing origin is identical to when ran `npm run
+      # dev` locally -- meaning api.py's existing CORS allowlist
+      # (http://localhost:5173) already covers this without any change.
+      - "5173:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  uploads_data:
+  chroma_data:
+  case_uploads_data:
