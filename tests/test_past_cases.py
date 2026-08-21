@@ -1,11 +1,3 @@
-"""
-Tests for tasks/past_cases.py
-
-search_past_cases() and ingest_cases() need a live ChromaDB collection +
-sentence-transformers embedder, so they're deliberately NOT unit tested
-here — those belong in a separate integration test against a disposable
-test collection (see the note at the bottom of this file).
-"""
 import pytest
 from tasks import past_cases
 
@@ -24,11 +16,6 @@ class TestChunkText:
         text = " ".join(words)
         chunks = past_cases.chunk_text(text, chunk_size=500, overlap=50)
         assert len(chunks) >= 3
-        # chunk0 = words[0:500], chunk1 starts at 500-50=450, so the
-        # OVERLAP region is words[450:500] — the last 50 words of chunk0
-        # must equal the first 50 words of chunk1. (Bug in the original
-        # version of this test: it compared the last 10 vs first 10,
-        # which are different word ranges entirely and don't overlap.)
         chunk0_words = chunks[0].split()
         chunk1_words = chunks[1].split()
         assert chunk0_words[-50:] == chunk1_words[:50]
@@ -109,18 +96,3 @@ class TestComputePastCasesConfidence:
         )
         assert result["has_citations"] is True
 
-
-# ── Integration test (separate concern — needs a real/disposable Chroma
-#    collection, run manually or in CI with a test fixture DB, not as part
-#    of the fast unit suite above) ─────────────────────────────────────────
-#
-# def test_search_past_cases_returns_deduplicated_results_from_test_collection():
-#     """
-#     Requires: a disposable ChromaDB collection seeded with >=2 chunks of
-#     the same known case + at least 1 other distinct case, so this can
-#     assert (a) results are returned, (b) no citation appears twice,
-#     (c) raw_fetch_count over-fetches before dedup as documented.
-#     Skip in the fast unit suite; run in a separate `pytest -m integration`
-#     pass against a scratch CHROMA_PATH.
-#     """
-#     pass

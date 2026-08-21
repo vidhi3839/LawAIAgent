@@ -1,19 +1,3 @@
-"""
-Opt-in LIVE tests — these hit the real internet (real Cornell/GovInfo).
-
-Excluded from the default `pytest tests/` run (see pytest.ini's
-`-m "not integration"`). Run explicitly and occasionally — e.g. weekly, or
-whenever you suspect a site changed — with:
-
-    pytest tests/test_live_smoke.py -m integration -v
-
-Why these exist separately from test_statutory_api_fixtures.py: the
-fixture tests replay a SAVED snapshot and will keep passing forever even
-if Cornell/GovInfo change their page structure tomorrow. These live tests
-are the only thing that actually re-checks against the CURRENT real site.
-If one of these fails, re-run capture_fixtures.py and go look at what
-actually changed on the page before assuming it's just a network blip.
-"""
 import pytest
 from tasks import statutory_api
 

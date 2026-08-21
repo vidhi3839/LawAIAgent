@@ -23,10 +23,6 @@ COLLECTION_NAME = "past_cases"
 CHUNK_SIZE = 500
 CHUNK_OVERLAP = 50
 
-# Reciprocal Rank Fusion constant -- standard default from the original RRF
-# paper (Cormack et al.). Not sensitive to tuning; 60 is the conventional
-# value used almost everywhere RRF is implemented, so we don't treat it as
-# something to hand-tune per query type.
 RRF_K = 60
 
 embedder = SentenceTransformer(EMBEDDING_MODEL)
@@ -371,13 +367,9 @@ def ingest_cases():
 def _deduplicate_cases(cases: list) -> list:
     """ChromaDB returns chunks, not whole documents — the same case can appear multiple times if several of its chunks each match well,
     inflating both the displayed 'Cases Retrieved' count and the averaged m_score used in compute_past_cases_confidence. Same fix already
-    applied to tasks/mock_court.py's case retrieval; this was the remaining unfixed instance of the identical pattern. Keeps only the
-    highest-similarity chunk per unique case (grouped by citation, falling back to case_name), sorted by similarity descending."""
+    applied to tasks/mock_court.py's case retrieval."""
     def _rank_key(c: dict) -> float:
-        # Prefer rrf_score when present (hybrid search results) so keyword-only
-        # hits that outrank on RRF aren't silently resorted back by pure
-        # cosine similarity. Falls back to similarity_score for callers that
-        # still pass dense-only results (e.g. mock_court.py's usage).
+        
         return c.get("rrf_score", c.get("similarity_score", 0))
 
     best_by_case = {}
@@ -392,8 +384,7 @@ def _tokenize(text: str) -> list:
     """Simple lowercase alphanumeric tokenizer for BM25. Deliberately basic
     (no stemming/stopword removal) -- BM25's own term-frequency weighting
     already down-weights common words naturally, and exact-token matching is
-    the whole point of the keyword side of hybrid search (we want "Van
-    Buren" or "593 U.S. 374" to match literally, not get stemmed away)."""
+    the whole point of the keyword side of hybrid search."""
     return re.findall(r"[a-z0-9]+", text.lower())
 
 
@@ -453,8 +444,7 @@ def search_past_cases(
     and party names (which embeddings alone are weak on) get a fair shot
     alongside paraphrase/semantic matches (which BM25 alone is weak on).
     Falls back gracefully to pure-vector ranking if BM25 finds nothing for
-    the query -- it never blocks a result the old pure-vector path would
-    have returned."""
+    the query."""
     query_embedding = embedder.encode(query).tolist()
 
     where_filter = None
@@ -501,8 +491,6 @@ def search_past_cases(
     keyword_hits = _keyword_search(query, raw_fetch_count)
     keyword_rank = {cid: rank for rank, (cid, _score) in enumerate(keyword_hits)}
 
-    # Fetch doc/metadata for any keyword-only hits the dense search didn't
-    # already return (e.g. an exact citation match embeddings ranked low).
     missing_ids = [cid for cid in keyword_rank if cid not in doc_by_id]
     if missing_ids:
         try:
@@ -513,8 +501,6 @@ def search_past_cases(
         except Exception as e:
             log.error(f"Fetching keyword-only hit metadata failed: {e}")
 
-    # Respect the jurisdiction filter for keyword-only hits too (dense
-    # search already applied it via `where`, keyword search didn't).
     if where_filter:
         keyword_rank = {
             cid: rank for cid, rank in keyword_rank.items()

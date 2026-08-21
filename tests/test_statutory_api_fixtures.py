@@ -1,23 +1,3 @@
-"""
-Fixture-based regression tests for statutory_api.py's scrapers.
-
-These do NOT hit the network — they replay a real, previously-captured
-snapshot (see capture_fixtures.py) through your ACTUAL parsing code by
-mocking only `requests.request`'s return value. This is the honest
-middle ground between:
-  - a fully mocked unit test (proves nothing about real page structure)
-  - a live test every CI run (flaky, slow, depends on Cornell/GovInfo
-    being up right now)
-
-If these fail, it means your parsing logic broke against real content
-you already captured — a genuine regression, not a network hiccup.
-If Cornell/GovInfo changes their page structure AFTER you captured the
-fixture, these tests will keep passing (they're replaying the OLD
-snapshot) — that's what test_live_smoke.py is for instead.
-
-Run capture_fixtures.py once before these will do anything useful:
-    python tests/capture_fixtures.py
-"""
 import os
 import pytest
 from unittest.mock import patch, MagicMock
@@ -47,23 +27,12 @@ class TestFetchLegalDefinitionAgainstRealSnapshot:
 
         assert domain == "law.cornell.edu"
         assert not text.startswith("Could not find")
-        # The real page's actual defining sentence — if your selector logic
-        # (soup.find("div", {"class": "field-items"}) or #content or main)
-        # stops matching Cornell's current markup, this substantively
-        # changes or empties out, and this assertion catches that.
         assert "equitable doctrine" in text.lower()
         assert "estoppel" in text.lower()
 
     def test_wex_definitions_index_page_correctly_rejected(self):
-        """fetch_legal_definition has an explicit guard against accidentally
-        matching the generic 'wex definitions' index page instead of a
-        real term page — confirm that guard still works against real
-        Cornell markup, not just a hand-written test string."""
+
         html = _load_fixture("cornell_wex_estoppel.html")
-        # Simulate the guard's actual trigger condition: a real index-page
-        # fixture would be needed for a full check, but at minimum confirm
-        # the real estoppel page does NOT get flagged as the index page
-        # (i.e. no false-positive rejection of a valid definition).
         fake_response = MagicMock(status_code=200, text=html)
         with patch("requests.request", return_value=fake_response):
             text, url, domain = statutory_api.fetch_legal_definition("estoppel")
@@ -97,17 +66,9 @@ class TestFetchStatuteAgainstRealSnapshot:
 
     def test_section_1030_content_page_parses_to_real_statute_text(self):
         html = _load_fixture("govinfo_title18_sec1030_content.html")
-        # fetch_statute makes two calls (granules search, then content) —
-        # this test isolates the SECOND call (content extraction) by
-        # directly exercising the same BeautifulSoup logic fetch_statute
-        # uses, since fully re-running the two-call flow here would just
-        # re-mock the first call anyway. If fetch_statute's extraction
-        # logic changes, update this alongside it.
         from bs4 import BeautifulSoup
         soup = BeautifulSoup(html, "html.parser")
         text = soup.get_text(separator=" ", strip=True)
         text = " ".join(text.split())
         assert len(text) > 100
-        # CFAA's actual statutory language — real content check, not a
-        # placeholder string
         assert "computer" in text.lower()

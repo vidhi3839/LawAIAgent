@@ -1,32 +1,3 @@
-"""
-Tests the ONE thing that matters most and was never actually tested:
-can Lawyer B see Lawyer A's private conversation? This must always be NO.
-
-WHAT THIS TEST DOES, IN PLAIN TERMS:
-1. Creates two pretend lawyers: "TEST_ISOLATION_LAWYER_A" and "...LAWYER_B".
-2. Saves a fake conversation under Lawyer A's name.
-3. Checks that Lawyer A CAN see it, and Lawyer B CANNOT.
-4. Deletes all the pretend data afterward, so nothing fake is left behind
-   in your real database.
-
-WHY THIS RUNS AGAINST YOUR REAL DATABASE (not a mock):
-Every other test in this suite mocks the database away, which is correct
-for testing app LOGIC fast and without side effects. But that means the
-actual SQL queries that enforce "lawyers can't see each other's threads"
-have never actually been run against a real database in any test until
-this one. A privacy guarantee is exactly the kind of thing you don't want
-to trust to a mock — this test uses your real DATABASE_URL (from .env,
-same as your running app) so the real SQL actually executes.
-
-SAFETY: all data this test writes is tagged with an unmistakable
-"TEST_ISOLATION_..." prefix and deleted in teardown, whether the test
-passes or fails. It never touches or reads any of your real lawyers'
-data. Skipped automatically (with a clear message) if DATABASE_URL isn't
-configured.
-
-Excluded from the default `pytest tests/` run. Run explicitly with:
-    pytest tests/test_thread_ownership_integration.py -m integration -v
-"""
 import os
 import sys
 import uuid
@@ -41,11 +12,7 @@ LAWYER_B = "TEST_ISOLATION_LAWYER_B"
 
 @pytest.fixture(scope="module")
 def real_main():
-    """Imports main.py fresh, using your REAL DATABASE_URL from .env — not
-    the fake placeholder other test files substitute. If test_main.py ran
-    earlier in the same pytest session, it may have already replaced
-    sys.modules["main"] with a mocked version; this forces a genuinely
-    fresh import here regardless."""
+
     try:
         from dotenv import dotenv_values
     except ImportError:
@@ -121,9 +88,7 @@ class TestLawyerDataIsolation:
         assert messages[1]["confidence"] == 0.9
 
     def test_second_call_to_save_thread_metadata_does_not_overwrite_owner(self, real_main, cleanup_test_rows):
-        """Regression check for the ON CONFLICT DO NOTHING behavior: once
-        a thread is owned by Lawyer A, a later call claiming Lawyer B
-        owns the same thread_id must NOT silently reassign ownership."""
+
         thread_id = f"test-isolation-{uuid.uuid4().hex[:8]}"
         real_main.save_thread_metadata(thread_id=thread_id, lawyer_name=LAWYER_A, label="first")
         real_main.save_thread_metadata(thread_id=thread_id, lawyer_name=LAWYER_B, label="second, should be ignored")

@@ -1,28 +1,3 @@
-"""
-Integration test for tasks/past_cases.py's search_past_cases() — the one
-thing the unit test suite explicitly could NOT cover, since it needs a
-real ChromaDB collection + the real embedding model, not mocks.
-
-Excluded from the default `pytest tests/` run (see pytest.ini). Run with:
-
-    pytest tests/test_past_cases_integration.py -m integration -v
-
-WHY A DISPOSABLE COLLECTION, NOT YOUR REAL ONE:
-past_cases.py's `collection` variable is bound at import time to your
-real production CHROMA_PATH. This test does NOT touch that data or that
-path — it swaps `past_cases.collection` for a fresh, in-memory
-(non-persistent) ChromaDB collection for the duration of the test only,
-seeded with synthetic-but-realistic case chunks. Your real ingested case
-data is never read or modified.
-
-WHY THE REAL EMBEDDING MODEL, NOT A FAKE ONE:
-The whole point of this test is to check real vector-search behavior
-(does a semantically similar query actually retrieve the right chunk,
-does dedup collapse the right chunks). A fake/random embedding would make
-the ranking meaningless. This uses the same all-MiniLM-L6-v2 model your
-app already loads — no new dependency, just the first real model load
-taking a few seconds.
-"""
 import pytest
 import chromadb
 import uuid
@@ -34,27 +9,13 @@ pytestmark = pytest.mark.integration
 
 @pytest.fixture
 def disposable_collection(monkeypatch):
-    """Builds a fresh in-memory ChromaDB collection, seeds it with
-    synthetic case chunks (including 3 chunks of the SAME case, to
-    directly exercise the dedup + over-fetch behavior), and swaps
-    past_cases.collection to point at it for the test's duration only.
-
-    IMPORTANT: chromadb.Client() collections are cached by name within the
-    same process — reusing a fixed name across tests causes
-    `chromadb.errors.InternalError: Collection [...] already exists` on
-    the second test, since nothing deleted the first one. Fixed here by
-    (a) giving each test run its own unique collection name, and
-    (b) explicitly deleting the collection in teardown regardless."""
-    client = chromadb.Client()  # in-memory, ephemeral — never touches disk
+    client = chromadb.Client()  
     collection_name = f"test_past_cases_{uuid.uuid4().hex[:8]}"
     test_collection = client.get_or_create_collection(
         name=collection_name,
         metadata={"hnsw:space": "cosine"},
     )
 
-    # Three chunks of the SAME case (same citation) with deliberately
-    # different text, so a query can plausibly match more than one chunk —
-    # this is exactly the scenario _deduplicate_cases exists to collapse.
     documents = [
         "Palsgraf v. Long Island Railroad addresses proximate cause and duty of care in negligence claims.",
         "The Palsgraf case established that a defendant owes a duty only to foreseeable plaintiffs.",

@@ -10,7 +10,7 @@ from sentence_transformers import SentenceTransformer, util
 load_dotenv()
 
 llm = ChatGroq(
-    model="llama-3.3-70b-versatile",
+    model="openai/gpt-oss-120b",
     temperature=0.0,
     api_key=os.getenv("GROQ_API_KEY")
 )
@@ -18,8 +18,7 @@ llm = ChatGroq(
 
 # 12,000 characters (~3,000 tokens) for the document sample, plus prompt template overhead (~300-400 tokens) and typical completion length
 # (~500-1000 tokens for structured extraction), keeps a single call to roughly 4,000-4,500 tokens — comfortably under the per-minute cap even
-# with other concurrent calls (router calls, other lawyers) sharing the same account-wide budget. If this account is upgraded to a higher Groq
-# tier, this can be raised — check the new TPM/TPD limits first.
+# with other concurrent calls (router calls, other lawyers) sharing the same account-wide budget.
 MAX_CHARS_FOR_LLM = 12000
 
 DATE_PATTERNS = [
@@ -32,7 +31,6 @@ DATE_PATTERNS = [
 
 ALL_SECTION_HEADERS = ["TIMELINE:", "CAST OF CHARACTERS:", "CAUSES OF ACTION:", "KEY FACTS:"]
 
-# Small, deliberately non-exhaustive stopword list for the "distinctive word" checks used in proximity matching. Not meant to be complete NLP-grade
 # stopword filtering — just enough to stop obviously generic words from passing as "evidence" a claim is grounded near a match.
 STOP_WORDS = {
     "which", "there", "their", "about", "state", "court", "other", "after", "before", "shall", "under", "these", "those", "would",
@@ -56,8 +54,7 @@ SENTENCE_STARTER_WORDS = {
 
 
 def _strip_think_tags(text: str) -> str:
-    """Some models wrap reasoning in <think>...</think> before the real
-    answer. Strip it if present."""
+    """Some models wrap reasoning in <think>...</think> before the real answer. Strip it if present."""
     if "<think>" in text and "</think>" in text:
         return text.split("</think>")[-1].strip()
     return text

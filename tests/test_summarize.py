@@ -1,12 +1,3 @@
-"""
-Tests for tasks/summarize.py
-
-compute_semantic_grounding loads a real sentence-transformers model, so it
-is mocked (via monkeypatching summarize._get_embedding_model) wherever it's
-a dependency of the function under test. It gets its own smoke test with a
-fake embedder so the *logic* (weakest-best-match aggregation) is still
-checked without a real model load.
-"""
 import pytest
 from unittest.mock import patch, MagicMock
 
@@ -94,13 +85,6 @@ class TestComputeChronologicalIntegrity:
         assert summarize.compute_chronological_integrity(extraction, raw_text) == 1.0
 
     def test_date_present_but_not_near_event_words_scores_half(self):
-        # _proximity_match looks +/-200 chars around the date's position —
-        # the original version of this test used a raw_text short enough
-        # that the whole document fell inside that window, so the event
-        # words matched "nearby" by accident and the test asserted the
-        # wrong thing. Padding with >200 chars of unrelated filler between
-        # the date and the event words actually exercises the "far apart"
-        # case the test claims to check.
         filler = "unrelated filler text about other matters entirely. " * 8  # > 200 chars
         raw_text = f"On march 5, 2020 nothing relevant happened. {filler} Much later, a complaint alleging fraud was filed."
         extraction = "TIMELINE:\n- march 5, 2020 — complaint filed alleging fraud\nCAST OF CHARACTERS:\n- x"
@@ -208,7 +192,6 @@ class TestComputeQAConfidence:
         """Regression check: weight must be 1/(available signal count),
         not a fixed 1/3 — this was a real bug fixed once already."""
         monkeypatch.setattr(summarize, "compute_semantic_grounding", lambda a, r: None)
-        # Only proper-noun signal available (no dates, no semantic score)
         raw_text = "Jane Doe appeared as counsel of record in this matter."
         answer = "Jane Doe appeared as counsel."
         result = summarize.compute_qa_confidence(answer, raw_text)

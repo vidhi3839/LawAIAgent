@@ -1,10 +1,3 @@
-"""Intent routing for the legal agent, via LLM tool-calling.
-
-The LLM picks exactly one tool schema per query and extracts its arguments
-in the same call. router_node_llm() is the LangGraph node entry point and
-returns a RouterResult dict, matching what api_execution_node expects.
-"""
-
 import os
 import logging
 from typing import Optional, Literal, TypedDict
@@ -16,7 +9,7 @@ from langchain_core.messages import HumanMessage, SystemMessage
 log = logging.getLogger(__name__)
 
 router_llm = ChatGroq(
-    model="llama-3.3-70b-versatile",
+    model="openai/gpt-oss-120b",
     temperature=0.0,
     api_key=os.getenv("GROQ_API_KEY"),
 )
@@ -28,7 +21,7 @@ class RouterResult(TypedDict):
     parsed_parameters: dict
     error: Optional[str]
 
-
+# Tool schemas
 class StatuteLookup(BaseModel):
     """Use when the lawyer cites a specific U.S. Code statute, e.g. '42 U.S.C. § 1983' or '15 USC 78j'."""
     title: int = Field(description="The U.S.C. title number, e.g. 42")
@@ -143,8 +136,7 @@ def _build_system_prompt(state: dict, has_previous_context: bool) -> str:
     thread_summary = state.get("thread_summary")
     if thread_summary:
         base += (
-            f"\n\nCONVERSATION SO FAR (a compressed summary of the whole "
-            f"conversation, for background awareness only): {thread_summary}\n"
+            f"\n\nCONVERSATION SO FAR (a compressed summary of the whole conversation, for background awareness only): {thread_summary}\n"
             f"Use this ONLY to understand what topics have already come up. "
             f"Do NOT choose FollowUp just because a topic sounds familiar from "
             f"this summary -- FollowUp is reserved for continuing the EXACT "
@@ -168,12 +160,9 @@ def _build_system_prompt(state: dict, has_previous_context: bool) -> str:
         f"- Previous intent handled: {prior_intent}\n"
         f"- Previous source: {prior_source}\n"
         f"- Snippet of what was retrieved: {prior_snippet}\n\n"
-        f"Use this ONLY to judge whether the current message is a FollowUp continuing "
-        f"that exact topic. If you choose ANY tool other than FollowUp, this previous "
-        f"context is IRRELEVANT to it — extract that tool's parameters (term, title, "
-        f"section, rule_number, etc.) SOLELY from the current message below, as if the "
-        f"previous context did not exist. Do not let the previous topic influence or "
-        f"carry over into a new, unrelated question's parameters."
+        f"Use this ONLY to judge whether the current message is a FollowUp continuing that exact topic. If you choose ANY tool other than FollowUp, this previous "
+        f"context is IRRELEVANT to it — extract that tool's parameters (term, title, section, rule_number, etc.) SOLELY from the current message below, as if the "
+        f"previous context did not exist. Do not let the previous topic influence or carry over into a new, unrelated question's parameters."
     )
 
 

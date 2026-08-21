@@ -1,10 +1,3 @@
-"""
-Tests for router_llm.py
-
-router_node_llm() itself calls Groq via tool-calling and is exercised with
-the LLM call mocked below. The pure guardrail function
-(_citation_matches_query) is tested directly with no mocking needed.
-"""
 import pytest
 from unittest.mock import MagicMock
 
@@ -72,8 +65,6 @@ class TestRouterNodeLLM:
         assert result["parsed_parameters"] == {"title": 18, "section": "1030"}
 
     def test_hallucinated_citation_triggers_reask_and_fails_cleanly_if_still_wrong(self, monkeypatch):
-        # First call hallucinates section "9999" which isn't in the query;
-        # correction re-ask returns the same wrong value again.
         bad_response = FakeRouterResponse([
             FakeToolCall(name="StatuteLookup", args={"title": 18, "section": "9999"})
         ])

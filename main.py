@@ -35,7 +35,7 @@ logging.basicConfig(
 log = logging.getLogger(__name__)
 
 llm = ChatGroq(
-    model="llama-3.3-70b-versatile",
+    model="openai/gpt-oss-120b",
     temperature=0.0,
     api_key=os.getenv("GROQ_API_KEY")
 )
@@ -880,25 +880,11 @@ def _result_is_retry_worthy(result: dict, user_threshold: Optional[float] = None
 def run_query_with_retry(query: str, thread_id: str, user_threshold: Optional[float] = None,
                           thread_summary: Optional[str] = None) -> dict:
     """Replaces the old in-graph retry cycle (should_retry/prepare_retry_node
-    as graph nodes), which is NOT used anymore — see the note above
-    workflow.add_edge("track_best", END). This calls the now-single-pass
-    graph up to TWICE using a plain Python loop and an ordinary local
-    variable to track attempts, which cannot suffer the same class of bug
-    as a LangGraph state channel (confirmed broken via
-    trace_state_history.py: attempt_count read as None at every single
-    step of a real run, including immediately after start_node explicitly
-    set it to 0).
+    as graph nodes), which is NOT used anymore.
 
     Hard cap: at most 2 total calls to legal_agent_graph.invoke(), no
     exceptions, enforced by this loop's own range(2) — cannot loop more
     than that no matter what any node returns.
-
-    thread_summary: if not passed explicitly, fetched from thread_id
-    directly. Compound-query sub-calls pass this explicitly (the REAL
-    main thread's summary), since they run under synthetic sub-thread-ids
-    like "{thread_id}-part1" that never have their own saved summary —
-    without this, a compound sub-question would silently get no
-    conversation memory at all.
     """
     best_result = None
     best_confidence = None

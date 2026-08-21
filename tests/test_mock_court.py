@@ -28,20 +28,15 @@ class TestStemOrExactMatch:
         ) is False
 
     def test_short_word_exact_boundary_match(self):
-        # "act" is < 8 chars — must be a whole-word match, not a substring
-        # of "action"/"actual"/"activity"
         words = ["action", "under", "the", "act"]
         assert mock_court._stem_or_exact_match("act", "action under the act", words) is True
 
     def test_short_word_does_not_falsely_match_inside_longer_word(self):
         words = ["action", "actual", "activity"]
         arg_lower = "the action was actual and part of routine activity"
-        # "act" should NOT appear as its own word here
         assert mock_court._stem_or_exact_match("act", arg_lower, words) is False
 
     def test_long_word_stem_match_catches_morphological_variant(self):
-        # "retaliation" (11 chars) stems to "retaliat" (len-3=8 chars) —
-        # should match "retaliated" via startswith
         words = ["the", "employee", "retaliated", "against", "him"]
         assert mock_court._stem_or_exact_match(
             "retaliation", "the employee retaliated against him", words
@@ -104,14 +99,10 @@ class TestComputeVulnerabilityExposure:
         assert mock_court.compute_vulnerability_exposure(arg) == 0.0
 
     def test_long_argument_scales_expected_count(self, sample_argument_strong):
-        # sample_argument_strong hits good_faith, statute_of_limitations,
-        # standing, safe_harbour explicitly (4 of 5) at word_count >= 50
         score = mock_court.compute_vulnerability_exposure(sample_argument_strong)
         assert 0.0 < score <= 1.0
 
     def test_false_positive_words_dont_count(self):
-        # Regression check: this exact sentence used to falsely count as
-        # addressing statute-of-limitations because of bare "within"/"days"
         arg = "We filed this within days of the incident, well before affected parties suffered loss."
         score = mock_court.compute_vulnerability_exposure(arg)
         assert score == 0.0
@@ -136,7 +127,6 @@ class TestComputeStrategicStrength:
         (0.3, "HIGH RISK"),
     ])
     def test_rating_bands(self, final_score, expected_flag, monkeypatch):
-        # Force the three sub-scores so final_score lands exactly where we want
         monkeypatch.setattr(mock_court, "compute_statutory_grounding", lambda a: final_score)
         monkeypatch.setattr(mock_court, "compute_precedent_support", lambda c: final_score)
         monkeypatch.setattr(mock_court, "compute_vulnerability_exposure", lambda a: final_score)

@@ -11,8 +11,9 @@ load_dotenv()
 log = logging.getLogger(__name__)
 
 llm = ChatGroq(
-    model="llama-3.3-70b-versatile",
-    temperature=0.1, 
+    model="openai/gpt-oss-120b",
+    temperature=0.1,  # deliberately non-zero — mock-court analysis shouldn't be as rigidly grounded as document extraction/Q&A
+    max_tokens=900,  # caps each of the 3 LLM calls in run_full_analysis.
     api_key=os.getenv("GROQ_API_KEY")
 )
 
@@ -81,8 +82,7 @@ def compute_statutory_grounding(argument: str) -> float:
 
 def compute_precedent_support(retrieved_cases: list) -> float:
     """Takes already-retrieved cases instead of searching itself — see run_full_analysis, which now does ONE search_past_cases call shared
-    across this function, analyze_counter_arguments, and evaluate_proof_strength. Previously each called search_past_cases
-    independently with the identical query, running the same embedding + nearest-neighbor search three times for the same result."""
+    across this function, analyze_counter_arguments, and evaluate_proof_strength. """
     if not retrieved_cases:
         return 0.1
 
@@ -157,11 +157,37 @@ def compute_strategic_strength(argument: str, retrieved_cases: list) -> dict:
     }
 
 
+def _finish_reason(response) -> Optional[str]:
+    """Reads whether this LLM response was cut off by max_tokens, across
+    the different places different langchain/Groq versions have put this. 
+    Returns None if it can't tell -- never raises."""
+    try:
+        meta = getattr(response, "response_metadata", None) or {}
+        if meta.get("finish_reason"):
+            return meta["finish_reason"]
+        kwargs = getattr(response, "additional_kwargs", None) or {}
+        return kwargs.get("finish_reason")
+    except Exception:
+        return None
+
+
+def _flag_if_truncated(text: str, response) -> str:
+    """Appends a visible warning if this response was cut off by the
+    max_tokens cap, instead of silently returning a truncated answer that
+    reads as complete."""
+    if _finish_reason(response) == "length":
+        log.warning("mock_court LLM response was truncated by max_tokens.")
+        return (text + "\n\n*[Note: this response was cut short by an output "
+                "length limit and may be incomplete. Consider re-running or "
+                "asking for a shorter argument.]*")
+    return text
+
+
 def analyze_counter_arguments(argument_text: str, retrieved_cases: list) -> dict:
     case_context = ""
     if retrieved_cases:
         case_context = "\n\n".join([
-            f"Case: {r['case_name']} ({r['citation']})\n{r['text'][:500]}"
+            f"Case: {r['case_name']} ({r['citation']})\n{r['text'][:300]}"
             for r in retrieved_cases
         ])
 
@@ -173,20 +199,22 @@ RELEVANT CASE LAW FROM DATABASE: {case_context if case_context else "No directly
 
 Identify the TOP 3 most aggressive and specific counter-arguments opposing counsel will raise against this argument.
 
-For each counter-argument:
+For each counter-argument, in 2-3 sentences total:
 1. State the counter-argument precisely
 2. Identify the legal basis — statute, case, or doctrine
 3. Explain why it weakens the lawyer's position
 
 Use ONLY legal reasoning grounded in the cases above or established legal doctrine.
 Do not invent cases. If no case supports a counter-argument, state the doctrinal basis.
-Be clinical and specific. Do NOT add meta-commentary."""
+Be clinical, specific, and CONCISE — plain prose, no tables, no headers, no meta-commentary.
+Keep the entire response under 350 words."""
 
     try:
         response = llm.invoke([HumanMessage(content=prompt)])
         text = response.content
         if "<think>" in text and "</think>" in text:
             text = text.split("</think>")[-1].strip()
+        text = _flag_if_truncated(text, response)
         return {"analysis": text, "retrieved_cases": retrieved_cases}
     except Exception as e:
         log.error(f"analyze_counter_arguments LLM call failed: {e}")
@@ -199,7 +227,7 @@ def evaluate_proof_strength(argument_text: str, retrieved_cases: list) -> dict:
     case_context = ""
     if retrieved_cases:
         case_context = "\n\n".join([
-            f"Case: {r['case_name']} ({r['citation']}, similarity: {r['similarity_score']:.2f})\n{r['text'][:500]}"
+            f"Case: {r['case_name']} ({r['citation']}, similarity: {r['similarity_score']:.2f})\n{r['text'][:300]}"
             for r in retrieved_cases
         ])
 
@@ -224,20 +252,23 @@ STATUTORY ASSESSMENT: {statutory_note}
 RELEVANT CASES FROM DATABASE:
 {case_context if case_context else "No directly relevant cases found in database."}
 
-Evaluate the proof strength of this argument by answering:
+Evaluate the proof strength of this argument by answering, briefly:
 1. Is the argument legally binding or speculative? Why?
 2. Which parts are well-supported by the cases or statutes above?
 3. Which parts are unsupported and could be dismissed as speculation?
 4. What specific evidence would make this argument stronger?
 
-Be precise and clinical. Ground every assessment in the cases or statutes provided.
-Do NOT invent citations. Do NOT add meta-commentary."""
+Be precise, clinical, and CONCISE — plain prose, no tables, no headers.
+Ground every assessment in the cases or statutes provided.
+Do NOT invent citations. Do NOT add meta-commentary.
+Keep the entire response under 350 words."""
 
     try:
         response = llm.invoke([HumanMessage(content=prompt)])
         text = response.content
         if "<think>" in text and "</think>" in text:
             text = text.split("</think>")[-1].strip()
+        text = _flag_if_truncated(text, response)
         return {
             "analysis": text,
             "statutory_note": statutory_note,
@@ -270,20 +301,23 @@ LAWYER'S ARGUMENT:
 UNADDRESSED LEGAL DEFENCES DETECTED:
 {chr(10).join(f"- {d}" for d in unaddressed) if unaddressed else "All standard defences appear addressed."}
 
-Identify the specific judicial gaps in this argument:
+Identify the specific judicial gaps in this argument, briefly:
 1. What logical leaps or unsupported assumptions does the argument make?
 2. What questions will a hostile judge ask from the bench?
 3. What elements of the legal standard are missing from this argument?
 4. What is the single most dangerous weakness opposing counsel will exploit?
 
-Be aggressive and specific. Think like a judge who is skeptical of this argument.
-Do NOT add meta-commentary or closing notes."""
+Be aggressive, specific, and CONCISE — plain prose, no tables, no headers.
+Think like a judge who is skeptical of this argument.
+Do NOT add meta-commentary or closing notes.
+Keep the entire response under 350 words."""
 
     try:
         response = llm.invoke([HumanMessage(content=prompt)])
         text = response.content
         if "<think>" in text and "</think>" in text:
             text = text.split("</think>")[-1].strip()
+        text = _flag_if_truncated(text, response)
         return {
             "analysis": text,
             "unaddressed_defences": unaddressed,

@@ -1,0 +1,19 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python .claude/hooks/post_edit_smoke_check.py"
+          },
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/check_intent_wiring.sh"
+          }
+        ]
+      }
+    ]
+  }
+}

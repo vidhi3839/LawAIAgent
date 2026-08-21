@@ -1,12 +1,3 @@
-"""
-Tests for tasks/statutory_api.py
-
-fetch_statute / fetch_legal_definition / fetch_federal_rule are not unit
-tested here — they're thin wrappers around live GovInfo/Cornell HTTP calls
-and HTML scraping. Cover those with a recorded-response integration test
-(e.g. vcrpy / responses library) against a fixture HTML page, separate
-from this fast unit suite.
-"""
 import pytest
 import requests
 from unittest.mock import patch, MagicMock

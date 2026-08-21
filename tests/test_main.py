@@ -1,21 +1,3 @@
-"""
-Tests for main.py
-
-IMPORTANT TESTABILITY NOTE (worth fixing, not just working around):
-main.py connects to Postgres and creates tables at MODULE IMPORT TIME
-(`ConnectionPool(...)`, `_ensure_thread_metadata_table()`, etc. all run as
-soon as `import main` executes, outside any function). That means you
-cannot import main.py at all in a test process without either:
-  (a) a real reachable Postgres instance + DATABASE_URL set, or
-  (b) mocking psycopg_pool.ConnectionPool and langgraph's PostgresSaver
-      BEFORE the import happens, as done below.
-
-Recommended follow-up (not done here, since it changes app code): move the
-DB connection + table creation into a `get_graph()` / `init_db()` function
-called explicitly at startup (e.g. from api.py's FastAPI startup event)
-instead of running at import time. That alone would remove the need for
-the import-time mocking gymnastics below and make this file much simpler.
-"""
 import os
 import sys
 import importlib
@@ -25,15 +7,6 @@ from unittest.mock import MagicMock, patch
 
 @pytest.fixture(scope="module")
 def main_module(request):
-    """Imports main.py with Postgres fully mocked out, so tests never
-    touch a real database. If main.py is already partially imported from
-    a prior test run, this forces a clean re-import under the mocks.
-
-    Note: this fixture is scope="module" but depends on the function-
-    scoped fake_pool_and_checkpointer fixture — pytest allows a
-    module-scoped fixture to request a narrower-scoped one as long as it
-    only does so once per module's lifetime, which is exactly this case
-    (main.py is only imported once for the whole test module)."""
     os.environ.setdefault("DATABASE_URL", "postgresql://fake:fake@localhost/fake")
     os.environ.setdefault("GROQ_API_KEY", "fake-key-for-tests")
 
@@ -104,13 +77,6 @@ class TestValidatePdfPath:
 
 class TestTrackBestNode:
     def test_start_node_resets_best_fields_every_turn(self, main_module):
-        """Regression test for the real bug found via live eval: on a
-        multi-turn conversation (same thread_id reused across turns),
-        best_response/best_confidence/best_intent were never reset,
-        so a later turn's LOWER-scoring (or failed) attempt got silently
-        replaced by an EARLIER, unrelated turn's answer — this is what
-        actually caused the "follow-up repeats the previous answer" bug,
-        not a router misclassification as first suspected."""
         stale_state_from_a_previous_turn = {
             "best_response": "an answer to a completely different earlier question",
             "best_confidence": 0.9,
@@ -151,13 +117,6 @@ class TestTrackBestNode:
 
 class TestVerificationNode:
     def test_compound_disclaimer_never_appears_on_error_responses(self, main_module, monkeypatch):
-        """Regression test: confirmed live that a FAILED response (router
-        error) was still getting the compound-question disclaimer
-        appended, because the wrapper checked result.get("error") — the
-        core function's OUTPUT — instead of state.get("error"), the
-        actual input that indicates a real failure occurred. Mocks
-        _verification_node_core directly so this test never makes a
-        real Groq call."""
         monkeypatch.setattr(
             main_module, "_verification_node_core",
             lambda state: {"final_response": "Error: something failed", "confidence_score": 0.0}
@@ -167,10 +126,6 @@ class TestVerificationNode:
         assert "more than one part" not in result["final_response"]
 
     def test_compound_disclaimer_appears_on_successful_compound_responses(self, main_module, monkeypatch):
-        """Confirms the fix didn't overcorrect — a genuinely successful
-        response to a flagged-compound question should still get the
-        disclaimer (confirmed live: this worked correctly for the
-        minor's-contract and habeas-corpus queries)."""
         monkeypatch.setattr(
             main_module, "_verification_node_core",
             lambda state: {"final_response": "Here is a real definition.", "confidence_score": 0.9}
@@ -245,22 +200,11 @@ class TestShouldRetry:
 
 class TestGraphWiring:
     def test_graph_is_single_pass_after_retry_revert(self, main_module):
-        """UPDATED AGAIN: retries were wired in, then REVERTED after a
-        real eval run found attempt_count's hard cap wasn't actually
-        stopping the loop (3/10 test queries crashed with a
-        GraphRecursionError instead of stopping after 1 retry). Back to
-        single-pass: start -> detect_compound -> router -> api_runner ->
-        verifier -> track_best -> END. If this gets fixed and re-wired
-        properly later, update this test deliberately again — don't
-        just delete it."""
         graph = main_module.legal_agent_graph
         assert graph is not None
         node_names = set(main_module.workflow.nodes.keys())
         assert {"start", "detect_compound", "router", "api_runner", "verifier", "track_best"}.issubset(node_names)
-        # prepare_retry is intentionally NOT a registered node right now —
-        # confirms the revert actually took effect, not just the comment.
         assert "prepare_retry" not in node_names
-        # The old, fully-superseded retry implementation stays removed.
         assert not hasattr(main_module, "retry_decision_node")
         assert not hasattr(main_module, "retry_prep_node")
 

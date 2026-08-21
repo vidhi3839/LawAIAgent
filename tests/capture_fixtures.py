@@ -1,30 +1,15 @@
 """
-Run this ONCE, manually, with real internet access, from your project root:
-
-    python tests/capture_fixtures.py
-
 It hits the REAL GovInfo and Cornell endpoints your app already calls and
 saves the raw responses under tests/fixtures/. After that, the fixture-based
 tests in test_statutory_api_fixtures.py replay these saved responses through
-your ACTUAL parsing code with zero network calls — so they run instantly,
-never flake because a site is briefly down, and still catch a real parsing
-regression if you change fetch_statute/fetch_legal_definition/fetch_federal_rule.
+your ACTUAL parsing code with zero network calls — so they run instantly.
 
-IMPORTANT — what this does and doesn't catch:
+what this does and doesn't catch:
 - DOES catch: you (or an LLM) accidentally breaking the BeautifulSoup
   selectors, the character limits, the retry logic, etc.
 - Does NOT catch: Cornell or GovInfo changing their page structure AFTER
-  you captured these fixtures. That's a different, ongoing risk — see
-  test_live_smoke.py for the opt-in test that checks against the CURRENT
-  live site (run that one occasionally, e.g. weekly, not on every commit).
-  Re-run this capture script periodically (e.g. every few months) to keep
-  the fixtures from silently going stale.
+  you captured these fixtures. 
 
-Why this has to be a separate manual script rather than something I can
-hand you as a ready-made fixture file: my own web-fetch tool converts
-pages to markdown, which throws away the exact <div class="..."> structure
-your BeautifulSoup selectors depend on. Only a real `requests.get()` from
-your machine captures byte-for-byte what your actual parser sees.
 """
 import os
 import requests
@@ -65,10 +50,7 @@ def main():
     print("govinfo title18 granules:", r.status_code)
     if r.status_code == 200:
         save("govinfo_title18_granules_page1.json", r.text)
-        # Try to find the actual CFAA (1030) granule id so we can also
-        # capture its content page in step 4 — falls back gracefully if
-        # not found on this first page (pagination is a separate concern,
-        # already covered by test_statutory_api.py's max_pages test).
+
         import json
         try:
             data = json.loads(r.text)
