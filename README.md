@@ -782,3 +782,10 @@ responses and additional retry delays.
 Past-case confidence thresholds are currently heuristic and should be
 validated against a larger representative evaluation set for the
 `all-MiniLM-L6-v2` embedding model before production use.
+
+---
+## Architecture diagram
+<img width="3768" height="2384" alt="LawAIAgent_architecture" src="https://github.com/user-attachments/assets/4b59410e-81f9-41db-954e-0f4ef5c31518" />
+
+## User Flow Diagram
+<img width="2422" height="4108" alt="LawAIAgent_business_flow" src="https://github.com/user-attachments/assets/f47bce61-65f5-4bfc-8510-4f72fa49f1c7" />
